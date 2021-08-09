@@ -1,7 +1,10 @@
 import * as apigateway from '@aws-cdk/aws-apigateway';
-import { AttributeType, Table } from '@aws-cdk/aws-dynamodb';
-import { Runtime } from '@aws-cdk/aws-lambda';
+import { AttributeType, StreamViewType, Table } from '@aws-cdk/aws-dynamodb';
+import { PolicyStatement } from '@aws-cdk/aws-iam';
+import { Runtime, StartingPosition } from '@aws-cdk/aws-lambda';
+import { DynamoEventSource, SqsEventSource, StreamEventSourceProps } from '@aws-cdk/aws-lambda-event-sources';
 import { NodejsFunction } from '@aws-cdk/aws-lambda-nodejs';
+import { Queue } from '@aws-cdk/aws-sqs';
 import * as cdk from '@aws-cdk/core';
 
 export interface ApiProps extends cdk.StackProps {
@@ -40,7 +43,14 @@ export class CdkUserCrudStack extends cdk.Stack {
             },
             tableName: 'UserTable',
             removalPolicy: cdk.RemovalPolicy.DESTROY,
+            stream: StreamViewType.NEW_IMAGE
         });
+
+        // ----------------------------------------------------------------
+        // SQS
+        // ----------------------------------------------------------------
+
+        const queue = new Queue(this, 'Queue', {});
 
         // ----------------------------------------------------------------
         // Lambda
@@ -58,8 +68,13 @@ export class CdkUserCrudStack extends cdk.Stack {
                 USER_TABLE_NAME: userTable.tableName,
                 AWS_REGION: AWS_REGION,
                 DYNAMODB_ENDPOINT: DYNAMODB_ENDPOINT,
+                QUEUE_URL: queue.queueUrl,
             },
         });
+
+        userCreateLambda.addToRolePolicy(
+            new PolicyStatement({ actions: ['sqs:SendMessage'], resources: [queue.queueArn] })
+        );
 
         userTable.grantFullAccess(userCreateLambda);
 
@@ -113,6 +128,39 @@ export class CdkUserCrudStack extends cdk.Stack {
         });
 
         userTable.grantFullAccess(userDeleteLambda);
+
+        const eventLambda = new NodejsFunction(this, 'EventFunction', {
+            entry: 'src/sqs/index.ts',
+            bundling: {
+                target: 'es2020',
+            },
+            runtime: Runtime.NODEJS_14_X,
+            memorySize: 256,
+            timeout: cdk.Duration.seconds(60),
+        });
+
+        // SQS を紐づける
+
+        eventLambda.addEventSource(new SqsEventSource(queue));
+
+        const streamLambda = new NodejsFunction(this, 'StreamFunction', {
+            entry: 'src/stream/index.ts',
+            bundling: {
+                target: 'es2020',
+            },
+            runtime: Runtime.NODEJS_14_X,
+            memorySize: 256,
+            timeout: cdk.Duration.seconds(60),
+        });
+
+        // DynamoDBを紐づける
+
+        const streamProps: StreamEventSourceProps = {
+            startingPosition: StartingPosition.LATEST,
+            batchSize: 1,
+        };
+
+        streamLambda.addEventSource(new DynamoEventSource(userTable, streamProps));
 
         // ----------------------------------------------------------------
         // API Gateway

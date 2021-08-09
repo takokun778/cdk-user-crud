@@ -1,5 +1,6 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import * as AWS from 'aws-sdk';
+import { SendMessageRequest } from 'aws-sdk/clients/sqs';
 import { DocumentClient } from 'aws-sdk/lib/dynamodb/document_client';
 import * as uuid from 'uuid';
 
@@ -13,6 +14,8 @@ const options = {
 const USER_TABLE_NAME = process.env.USER_TABLE_NAME || 'UserTable';
 
 const dynamodb = new AWS.DynamoDB.DocumentClient(options);
+
+const sqs = new AWS.SQS({ region: process.env.AWS_REGION || 'us-east-1' });
 
 exports.handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     // console.log(event.httpMethod);
@@ -43,6 +46,13 @@ exports.handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyRe
         firstName: req.firstName,
         lastName: req.lastName,
     };
+
+    const message: SendMessageRequest = {
+        MessageBody: JSON.stringify(res),
+        QueueUrl: process.env.QUEUE_URL || '',
+    };
+
+    await sqs.sendMessage(message).promise();
 
     return {
         statusCode: 200,
