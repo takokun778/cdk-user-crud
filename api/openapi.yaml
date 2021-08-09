@@ -1,0 +1,153 @@
+openapi: 3.0.1
+
+info:
+  title: ユーザー
+  description: 'ユーザーCRUD操作をサーバーレス(aws)で構築する'
+  termsOfService: http://swagger.io/terms/
+  contact:
+    email: apiteam@swagger.io
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  version: 1.0.0
+
+externalDocs:
+  description: Find out more about Swagger
+  url: http://swagger.io
+
+servers:
+- url: http://fs-swagger.com # サーバーのURL
+
+tags:
+- name: user
+  description: ユーザー操作
+  externalDocs:
+    description: 外部ドキュメントへのリンク
+    url: http://swagger.io
+
+paths:
+  /user:
+    post:
+      tags:
+      - user
+      summary: ユーザー作成
+      description: 説明
+      operationId: create
+      requestBody:
+        description: 作成するユーザー
+        content:
+          '*/*':
+            schema:
+              $ref: '#/components/schemas/CreateUserInput'
+        required: true
+      responses:
+        default:
+          description: successful operation
+          content: {}
+        200:
+          description: ユーザー情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+      x-codegen-request-body-name: body  # この記述ないとメソッド自動生成が変？
+  /user/{id}:
+    get:
+      tags:
+      - user
+      summary: ユーザー取得
+      operationId: get
+      parameters:
+      - name: id
+        in: path
+        description: '取得したいユーザーのId'
+        required: true
+        schema:
+          type: string
+      responses:
+        200:
+          description: ユーザー情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        400:
+          description: 'リクエスト値が正しくない'
+          content: {}
+        404:
+          description: 'ユーザーが存在しない'
+          content: {}
+      x-codegen-request-body-name: body
+    put:
+      tags:
+      - user
+      summary: ユーザー更新
+      operationId: update
+      parameters:
+      - name: id
+        in: path
+        description: '更新したいユーザーのId'
+        required: true
+        schema:
+          type: string
+      requestBody:
+        description: '更新する値'
+        content:
+          '*/*':
+            schema:
+              $ref: '#/components/schemas/UpdateUserInput'
+        required: true
+      responses:
+        400:
+          description: 'リクエスト値が正しくない'
+          content: {}
+        404:
+          description: 'ユーザーが存在しない'
+          content: {}
+      x-codegen-request-body-name: body
+    delete:
+      tags:
+      - user
+      summary: ユーザー削除
+      operationId: delete
+      parameters:
+      - name: id
+        in: path
+        description: '削除したいユーザーのId'
+        required: true
+        schema:
+          type: string
+      responses:
+        400:
+          description: 'リクエスト値が正しくない'
+          content: {}
+        404:
+          description: 'ユーザーが存在しない'
+          content: {}
+      x-codegen-request-body-name: body
+
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+    CreateUserInput:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+    UpdateUserInput:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string

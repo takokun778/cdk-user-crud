@@ -1,0 +1,30 @@
+version: "3.8"
+
+services:
+  localstack:
+    container_name: localstack
+    image: localstack/localstack
+    network_mode: bridge
+    ports:
+      - "53:53"
+      - "53:53/udp"
+      - "443:443"
+      - "4566:4566"
+      - "4571:4571"
+    environment:
+      - SERVICES=${SERVICES}
+      - HOSTNAME=localhost
+      - DEBUG=${DEBUG}
+      - DATA_DIR=${TMPDIR}/localstack/data
+      - LAMBDA_EXECUTOR=docker
+      - LAMBDA_DOCKER_NETWORK=host
+      # - LOCALSTACK_API_KEY=${LOCALSTACK_API_KEY- }
+      - KINESIS_STREAM_SHARDS=1
+      - KINESIS_ERROR_PROBABILITY=0.0
+      - KINESIS_STREAM_NAME=my-stream
+      - KINESIS_PROVIDER=kinesalite
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - HOST_TMP_FOLDER=${TMPDIR}
+    volumes:
+      - "${TMPDIR}/localstack:/tmp/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
